@@ -1,3 +1,5 @@
+CRED = "Sa0iBLPNyJQrwpTTG-tWLQU-1QeUAJA73DdxGGiKoJc"
+
 -- grid dimensions
 Width = 1000
 Height = 1000
@@ -37,6 +39,16 @@ function onTick()
     end
 end
 
+local function isOccupied(x,y) 
+  local result = false
+  for k,v in pairs(Players) do
+    if v.x == x and v.y == y then
+        result = true
+        return
+    end
+  end
+end
+
 -- Handles player movement
 -- @param msg: Message request sent by player with movement direction and player info
 function move(msg)
@@ -55,13 +67,20 @@ function move(msg)
         local newX = Players[playerToMove].x + directionMap[direction].x
         local newY = Players[playerToMove].y + directionMap[direction].y
 
+        -- Player cant move to cell already occupied.
+        if isOccupied(newX, newY) then
+            Send({Target = playerToMove, Action = "Move-Failed", Reason = "Cell Occupied."})
+            return 
+        end
+
         -- updates player coordinates while checking for grid boundaries
         Players[playerToMove].x = (newX - 1) % Width + 1
         Players[playerToMove].y = (newY - 1) % Height + 1
 
-        announce("Player-Moved", playerToMove .. " moved to " .. Players[playerToMove].x .. "," .. Players[playerToMove].y .. ".")
+        Send({Target = playerToMove, Action="Player-Moved", Data = playerToMove .. " moved to " .. Players[playerToMove].x .. "," .. Players[playerToMove].y .. "."})
+        --announce("Player-Moved", playerToMove .. " moved to " .. Players[playerToMove].x .. "," .. Players[playerToMove].y .. ".")
     else
-        ao.send({Target = playerToMove, Action = "Move-Failed", Reason = "Invalid direction."})
+        Send({Target = playerToMove, Action = "Move-Failed", Reason = "Invalid direction."})
     end
     onTick()  -- Optional: Update energy each move
 end
@@ -70,7 +89,7 @@ end
 -- @param msg: Message request sent by player with attack info and player state
 function attack(msg)
     local player = msg.From
-    local attackEnergy = tonumber(msg.Tags.AttackEnergy)
+    local attackEnergy = math.abs(tonumber(msg.Tags.AttackEnergy))
 
     -- get player coordinates
     local x = Players[player].x
@@ -86,8 +105,7 @@ function attack(msg)
     Players[player].energy = Players[player].energy - attackEnergy
     local damage = math.floor((math.random() * 2 * attackEnergy) * (1/AverageMaxStrengthHitsToKill))
 
-    announce("Attack", player .. " has launched a " .. damage .. " damage attack from " .. x .. "," .. y .. "!")
-
+    --announce("Attack", player .. " has launched a " .. damage .. " damage attack from " .. x .. "," .. y .. "!")   
     -- check if any player is within range and update their status
     for target, state in pairs(Players) do
         if target ~= player and inRange(x, y, state.x, state.y, Range) then
@@ -96,8 +114,8 @@ function attack(msg)
                 eliminatePlayer(target, player)
             else
                 Players[target].health = newHealth
-                ao.send({Target = target, Action = "Hit", Damage = tostring(damage), Health = tostring(newHealth)})
-                ao.send({Target = player, Action = "Successful-Hit", Recipient = target, Damage = tostring(damage), Health = tostring(newHealth)})
+                Send({Target = target, Action = "Hit", Damage = tostring(damage), Health = tostring(newHealth)})
+                Send({Target = player, Action = "Successful-Hit", Recipient = target, Damage = tostring(damage), Health = tostring(newHealth)})
             end
         end
     end
@@ -152,12 +170,12 @@ Handlers.add("PlayerAttack", Handlers.utils.hasMatchingTag("Action", "PlayerAtta
 -- [Not-Started] -> Waiting -> Playing -> [Someone wins or timeout] -> Waiting...
 -- The loop is broken if there are not enough players to start a game after the waiting state.
 GameMode = GameMode or "Playing"
-StateChangeTime = StateChangeTime or undefined
+StateChangeTime = StateChangeTime or 0
 
 -- State durations (in milliseconds)
 WaitTime = WaitTime or 2 * 60 * 1000 -- 2 minutes
 GameTime = GameTime or 20 * 60 * 1000 -- 20 minutes
-Now = Now or undefined -- Current time, updated on every message.
+Now = Now or 0 -- Current time, updated on every message.
 
 -- Token information for player stakes.
 PaymentToken = PaymentToken or "ADDR"  -- Token address
@@ -173,7 +191,7 @@ Winners = 0
 -- Processes subscribed to game announcements.
 Listeners = Listeners or {}
 -- Minimum number of players required to start a game.
-MinimumPlayers = MinimumPlayers or 2
+MinimumPlayers = MinimumPlayers or 1
 
 -- Default player state initialization.
 PlayerInitState = PlayerInitState or {}
@@ -207,29 +225,6 @@ function sendReward(recipient, qty, reason)
     })
 end
 
--- Handles the elimination of a player from the game.
--- @param eliminated: The player to be eliminated.
--- @param eliminator: The player causing the elimination.
-function eliminatePlayer(eliminated, eliminator)
-    -- addLog("EliminatePlayer", "Eliminating player: " .. eliminated .. " by: " .. eliminator) -- Useful for tracking eliminations
-
-    sendReward(eliminator, PaymentQty, "Eliminated-Player")
-    Players[eliminated] = nil
-
-    ao.send({
-        Target = eliminated,
-        Action = "Eliminated",
-        Eliminator = eliminator
-    })
-
-    announce("Player-Eliminated", eliminated .. " was eliminated by " .. eliminator .. "!")
-    
-    local playerCount = 0
-    for player, _ in pairs(Players) do
-        playerCount = playerCount + 1
-    end
-end
-
 -- Removes a listener from the listeners' list.
 -- @param listener: The listener to be removed.
 function removeListener(listener)
@@ -246,6 +241,31 @@ function removeListener(listener)
         table.remove(Listeners, idx)
     end 
 end
+
+-- Handles the elimination of a player from the game.
+-- @param eliminated: The player to be eliminated.
+-- @param eliminator: The player causing the elimination.
+function eliminatePlayer(eliminated, eliminator)
+
+    sendReward(eliminator, tonumber(Balances[eliminated]), "Eliminated-Player")
+    Balances[eliminated] = "0"
+    Players[eliminated] = nil
+
+    Send({
+        Target = eliminated,
+        Action = "Eliminated",
+        Eliminator = eliminator
+    })
+    removeListener(eliminated)
+    -- announce("Player-Eliminated", eliminated .. " was eliminated by " .. eliminator .. "!")
+    
+    local playerCount = 0
+    for player, _ in pairs(Players) do
+        playerCount = playerCount + 1
+    end
+end
+
+
 
 -- HANDLERS: Game state management
 
@@ -267,51 +287,40 @@ Handlers.add(
     function(Msg)
         return
             Msg.Action == "Credit-Notice" and
-            Msg.From == PaymentToken and
+            Msg.From == CRED and
             tonumber(Msg.Quantity) >= PaymentQty and "continue"
     end,
     function(Msg)
-        if Waiting[Msg.Sender] then
-          Players[Msg.Sender] = playerInitState()
-          Waiting[Msg.Sender] = nil
-          ao.send({
-              Target = Msg.Sender,
-              Action = "Payment-Received"
-          })
-
-          announce("Player-Ready", Msg.From .. " is added to the grid good luck!")
+        Players[Msg.Sender] = playerInitState()
+        if not Balances[Msg.Sender] then
+            Balances[Msg.Sender] = "0"
         end
-    end
-)
-
--- Registers new players for the next game and subscribes them for event info.
-Handlers.add(
-    "Register",
-    Handlers.utils.hasMatchingTag("Action", "Register"),
-    function(Msg)
-        if Msg.Mode ~= "Listen" and Waiting[Msg.From] == undefined then
-            Waiting[Msg.From] = true
-        end
-        removeListener(Msg.From)
-        table.insert(Listeners, Msg.From)
-        ao.send({
-            Target = Msg.From,
-            Action = "Registered"
+        Balances[Msg.Sender] = tostring(
+            math.floor(
+                tonumber(Balances[Msg.Sender]) + tonumber(Msg.Quantity)
+            )
+        )
+        Send({
+            Target = Msg.Sender,
+            Action = "Payment-Received",
+            Data = "You are in the game."
         })
-        announce("New Player Registered", Msg.From .. " has joined in waiting.")
+        
     end
 )
 
--- Unregisters players and stops sending them event info.
+-- Exits the game receives CRED
 Handlers.add(
-    "Unregister",
-    Handlers.utils.hasMatchingTag("Action", "Unregister"),
+    "Withdraw",
+    Handlers.utils.hasMatchingTag("Action", "Withdraw"),
     function(Msg)
         Players[Msg.From] = nil
+        Send({Target = CRED, Action = "Transfer", Quantity = Balances[Msg.From], Recipient = Msg.From })
+        Balances[Msg.From] = "0"
         removeListener(Msg.From)
-        ao.send({
+        Send({
             Target = Msg.From,
-            Action = "Unregistered"
+            Action = "Removed from the Game"
         })
     end
 )
@@ -327,23 +336,10 @@ Handlers.add(
             GameMode = GameMode,
             Players = Players,
             })
-        ao.send({
+        Send({
             Target = Msg.From,
             Action = "GameState",
-            Data = GameState})
-    end
-)
-
--- Sends tokens to players with no balance upon request
-Handlers.add(
-    "RequestTokens",
-    Handlers.utils.hasMatchingTag("Action", "RequestTokens"),
-    function (Msg)
-        ao.send({
-            Target = ao.id,
-            Action = "Transfer",
-            Quantity = "10000",
-            Recipient = Msg.From,
+            Data = GameState
         })
     end
 )
