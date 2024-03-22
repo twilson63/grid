@@ -1,8 +1,8 @@
 CRED = "Sa0iBLPNyJQrwpTTG-tWLQU-1QeUAJA73DdxGGiKoJc"
 
 -- grid dimensions
-Width = 1000
-Height = 1000
+Width = 40
+Height = 40
 Range = 3
 
 -- Player energy
@@ -18,7 +18,8 @@ function playerInitState()
         x = math.random(0, Width),
         y = math.random(0, Height),
         health = 100,
-        energy = 0
+        energy = 0,
+        lastTurn = 0
     }
 end
 
@@ -62,6 +63,10 @@ function move(msg)
         DownRight = {x = 1, y = 1}, DownLeft = {x = -1, y = 1}
     }
 
+    -- only 1 turn per second
+    if msg.Timestamp <  Players[playerToMove].lastTurn + 1000 then
+        return
+    end
     -- calculate and update new coordinates
     if directionMap[direction] then
         local newX = Players[playerToMove].x + directionMap[direction].x
@@ -82,6 +87,7 @@ function move(msg)
     else
         Send({Target = playerToMove, Action = "Move-Failed", Reason = "Invalid direction."})
     end
+    Players[playerToMove].lastTurn = msg.Timestamp
     onTick()  -- Optional: Update energy each move
 end
 
@@ -89,12 +95,17 @@ end
 -- @param msg: Message request sent by player with attack info and player state
 function attack(msg)
     local player = msg.From
-    local attackEnergy = math.abs(tonumber(msg.Tags.AttackEnergy))
+    local attackEnergy = tonumber(msg.Tags.AttackEnergy) < 0 and 0 or tonumber(msg.Tags.AttackEnergy)
 
     -- get player coordinates
     local x = Players[player].x
     local y = Players[player].y
 
+    -- only 1 turn per second
+    if msg.Timestamp <  Players[player].lastTurn + 1000 then
+        return
+    end
+    
     -- check if player has enough energy to attack
     if Players[player].energy < attackEnergy then
         ao.send({Target = player, Action = "Attack-Failed", Reason = "Not enough energy."})
@@ -119,6 +130,7 @@ function attack(msg)
             end
         end
     end
+    Players[player].lastTurn = msg.Timestamp
 end
 
 -- Helper function to check if a target is within range
@@ -265,6 +277,16 @@ function eliminatePlayer(eliminated, eliminator)
     end
 end
 
+function scaleNumber(oldValue)
+    local oldMin = 10
+    local oldMax = 1000
+    local newMin = 1
+    local newMax = 100
+
+    local newValue = (((oldValue - oldMin) * (newMax - newMin)) / (oldMax - oldMin)) + newMin
+    return newValue
+end
+
 
 
 -- HANDLERS: Game state management
@@ -291,15 +313,24 @@ Handlers.add(
             tonumber(Msg.Quantity) >= PaymentQty and "continue"
     end,
     function(Msg)
-        Players[Msg.Sender] = playerInitState()
+        local q = tonumber(Msg.Quantity)
+        
         if not Balances[Msg.Sender] then
             Balances[Msg.Sender] = "0"
         end
-        Balances[Msg.Sender] = tostring(
-            math.floor(
-                tonumber(Balances[Msg.Sender]) + tonumber(Msg.Quantity)
-            )
-        )
+
+        local balance = tonumber(Balances[Msg.Sender])
+        Players[Msg.Sender] = playerInitState()
+        
+        balance = math.floor(balance + q)
+        Balances[Msg.Sender] = tostring(balance)
+        if balance <= 10 then
+            Players[Msg.Sender].health = 1
+        elseif balance >= 1000 then
+            Players[Msg.Sender].health = 100
+        else
+            Players[Msg.Sender].health = math.floor(scaleNumber(balance))
+        end
         Send({
             Target = Msg.Sender,
             Action = "Payment-Received",

@@ -1,7 +1,6 @@
 -- Initializing global variables to store the latest game state and game host process.
 LatestGameState = LatestGameState or nil
 Game = Game or nil
-InAction = InAction or false
 Counter = Counter or 0
 
 Logs = Logs or {}
@@ -45,12 +44,11 @@ function decideNextAction()
     print(colors.red .. "Player in range. Attacking..." .. colors.reset)
     ao.send({Target = Game, Action = "PlayerAttack", AttackEnergy = tostring(player.energy)})
   else
-    print(colors.red .. "No player in range or insufficient energy. Moving randomly." .. colors.reset)
+    -- print(colors.red .. "No player in range or insufficient energy. Moving randomly." .. colors.reset)
     local directionMap = {"Up", "Down", "Left", "Right", "UpRight", "UpLeft", "DownRight", "DownLeft"}
     local randomIndex = math.random(#directionMap)
     ao.send({Target = Game, Action = "PlayerMove", Direction = directionMap[randomIndex]})
   end
-  InAction = false
 end
 
 -- Handler to print game announcements and trigger game state updates.
@@ -58,23 +56,10 @@ Handlers.add(
   "PrintAnnouncements",
   Handlers.utils.hasMatchingTag("Action", "Announcement"),
   function (msg)
-    if msg.Event == "Started-Waiting-Period" then
-      ao.send({Target = ao.id, Action = "AutoPay"})
-    elseif ((msg.Event == "Tick" and LatestGameState.GameMode == "Playing") or msg.Event == "Started-Game") and not InAction then
-      InAction = true
-      -- print("Getting game state...")
-      ao.send({Target = Game, Action = "GetGameState"})
-    elseif (InAction and LatestGameState.GameMode == "Playing") then
-      print("Previous action still in progress. Skipping...")
-      Counter = Counter + 1
-      if Counter > 3 then
-        print("Counter reset...")
-        Counter = 0
-        InAction = false
-        ao.send({Target = Game, Action = "GetGameState"})
-      end
-    end
+    ao.send({Target = Game, Action = "GetGameState"})
     print(colors.green .. msg.Event .. ": " .. msg.Data .. colors.reset)
+    print("Location: " .. "row: " .. LatestGameState.Players[ao.id].x .. ' col: ' .. LatestGameState.Players[ao.id].y)
+
   end
 )
 
@@ -83,30 +68,8 @@ Handlers.add(
   "GetGameStateOnTick",
   Handlers.utils.hasMatchingTag("Action", "Tick"),
   function ()
-    if not InAction then
-      InAction = true
-      print(colors.gray .. "Getting game state..." .. colors.reset)
+      -- print(colors.gray .. "Getting game state..." .. colors.reset)
       ao.send({Target = Game, Action = "GetGameState"})
-    else
-      print("Previous action still in progress. Skipping...")
-      Counter = Counter + 1
-      if Counter > 3 then
-        print("Counter reset...")
-        Counter = 0
-        InAction = false
-        ao.send({Target = Game, Action = "GetGameState"})
-      end
-    end
-  end
-)
-
--- Handler to automate payment confirmation when waiting period starts.
-Handlers.add(
-  "AutoPay",
-  Handlers.utils.hasMatchingTag("Action", "AutoPay"),
-  function (msg)
-    print("Auto-paying confirmation fees.")
-    ao.send({ Target = Game, Action = "Transfer", Recipient = Game, Quantity = "1"})
   end
 )
 
@@ -118,7 +81,8 @@ Handlers.add(
     local json = require("json")
     LatestGameState = json.decode(msg.Data)
     ao.send({Target = ao.id, Action = "UpdatedGameState"})
-    print("Game state updated. Print \'LatestGameState\' for detailed view.")
+    --print("Game state updated. Print \'LatestGameState\' for detailed view.")
+    print("Location: " .. "row: " .. LatestGameState.Players[ao.id].x .. ' col: ' .. LatestGameState.Players[ao.id].y)
   end
 )
 
@@ -127,11 +91,7 @@ Handlers.add(
   "decideNextAction",
   Handlers.utils.hasMatchingTag("Action", "UpdatedGameState"),
   function ()
-    if LatestGameState.GameMode ~= "Playing" then 
-      InAction = false
-      return 
-    end
-    print("Deciding next action...")
+    --print("Deciding next action...")
     decideNextAction()
     ao.send({Target = ao.id, Action = "Tick"})
   end
@@ -142,31 +102,18 @@ Handlers.add(
   "ReturnAttack",
   Handlers.utils.hasMatchingTag("Action", "Hit"),
   function (msg)
-    if not InAction then
-      InAction = true
-      local playerEnergy = LatestGameState.Players[ao.id].energy
-      if playerEnergy == undefined then
-        print(colors.red .. "Unable to read energy." .. colors.reset)
-        ao.send({Target = Game, Action = "Attack-Failed", Reason = "Unable to read energy."})
-      elseif playerEnergy > 10 then
-        print(colors.red .. "Player has insufficient energy." .. colors.reset)
-        ao.send({Target = Game, Action = "Attack-Failed", Reason = "Player has no energy."})
-      else
-        print(colors.red .. "Returning attack..." .. colors.reset)
-        ao.send({Target = Game, Action = "PlayerAttack", AttackEnergy = tostring(playerEnergy)})
-      end
-      InAction = false
-      ao.send({Target = ao.id, Action = "Tick"})
+    local playerEnergy = LatestGameState.Players[ao.id].energy
+    if playerEnergy == undefined then
+      print(colors.red .. "Unable to read energy." .. colors.reset)
+      ao.send({Target = Game, Action = "Attack-Failed", Reason = "Unable to read energy."})
+    elseif playerEnergy > 10 then
+      print(colors.red .. "Player has insufficient energy." .. colors.reset)
+      ao.send({Target = Game, Action = "Attack-Failed", Reason = "Player has no energy."})
     else
-      -- print("Previous action still in progress. Skipping...")
-      Counter = Counter + 1
-      if Counter > 3 then
-        -- print("Counter reset...")
-        Counter = 0
-        InAction = false
-        ao.send({Target = Game, Action = "GetGameState"})
-      end
+      print(colors.red .. "Returning attack..." .. colors.reset)
+      ao.send({Target = Game, Action = "PlayerAttack", AttackEnergy = tostring(playerEnergy)})
     end
+    ao.send({Target = ao.id, Action = "Tick"})
   end
 )
 
