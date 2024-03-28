@@ -1,4 +1,9 @@
 CRED = "Sa0iBLPNyJQrwpTTG-tWLQU-1QeUAJA73DdxGGiKoJc"
+Version = "0.2"
+
+-- Attack info
+LastPlayerAttacks = {}
+CurrentAttacks = 0
 
 -- grid dimensions
 Width = 40
@@ -121,6 +126,13 @@ function attack(msg)
     for target, state in pairs(Players) do
         if target ~= player and inRange(x, y, state.x, state.y, Range) then
             local newHealth = state.health - damage
+            -- Document Current Attacks
+            CurrentAttacks = CurrentAttacks + 1
+            LastPlayerAttacks[CurrentAttacks] = {
+                Player = player,
+                Target = target,
+                id = CurrentAttacks
+            }
             if newHealth <= 0 then
                 eliminatePlayer(target, player)
             else
@@ -371,6 +383,23 @@ Handlers.add(
             Target = Msg.From,
             Action = "GameState",
             Data = GameState
+        })
+    end
+)
+
+-- Retrieves the current attacks that has been made in the game.
+Handlers.add(
+    "GetGameAttacksInfo",
+    Handlers.utils.hasMatchingTag("Action", "GetGameAttacksInfo"),
+    function (Msg)
+        local json = require("json")
+        local GameAttacksInfo = json.encode({
+            LastPlayerAttacks = LastPlayerAttacks,
+        })
+        ao.send({
+            Target = Msg.From,
+            Action = "GameAttacksInfo",
+            Data = GameAttacksInfo
         })
     end
 )
