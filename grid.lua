@@ -43,6 +43,18 @@ function onTick()
         end
         LastTick = Now
     end
+
+    if TenSecondCheck == undefined then TenSecondCheck = Now end
+    local TenSecondElaspedCheck = Now - TenSecondCheck
+    if TenSecondElaspedCheck >= 10000 then
+        -- only keep the last 20
+        while #LastPlayerAttacks > 20 do
+            table.remove(LastPlayerAttacks, 1)
+        end
+        TenSecondCheck = Now
+    end
+    
+
 end
 
 local function isOccupied(x,y) 
@@ -401,5 +413,6 @@ Handlers.add(
             Action = "GameAttacksInfo",
             Data = GameAttacksInfo
         })
+        LastPlayerAttacks = {}
     end
 )
