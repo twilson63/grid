@@ -391,7 +391,7 @@ Handlers.add(
     Handlers.utils.hasMatchingTag("Action", "GetGameState"),
     function (Msg)
         if Players[Msg.From] and Msg.Name then
-            Players[Msg.From].Name = Msg.Name
+            Players[Msg.From].name = Msg.Name
         end
         local json = require("json")
         local GameState = json.encode({
