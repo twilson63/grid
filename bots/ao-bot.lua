@@ -1,9 +1,8 @@
 -- Initializing global variables to store the latest game state and game host process.
 LatestGameState = LatestGameState or nil
-Game = Game or nil
+Game = Game or "03I7E-3wkTZa__Bn1Qq5flYrtEQ7NkcoD9Ctg4o2mNI"
+CRED = CRED or "Sa0iBLPNyJQrwpTTG-tWLQU-1QeUAJA73DdxGGiKoJc"
 Counter = Counter or 0
-
-Logs = Logs or {}
 
 colors = {
   red = "\27[31m",
@@ -12,11 +11,6 @@ colors = {
   reset = "\27[0m",
   gray = "\27[90m"
 }
-
-function addLog(msg, text) -- Function definition commented for performance, can be used for debugging
-  Logs[msg] = Logs[msg] or {}
-  table.insert(Logs[msg], text)
-end
 
 -- Checks if two points are within a given range.
 -- @param x1, y1: Coordinates of the first point.
@@ -122,6 +116,15 @@ Handlers.add(
   Handlers.utils.hasMatchingTag("Action", "Eliminated"),
   function (msg)
     Send({Target = CRED, Action = "Transfer", Quantity = "1000", Recipient = Game})
+  end
+)
+
+Handlers.add(
+  "StartTick",
+  Handlers.utils.hasMatchingTag("Action", "Payment-Received"),
+  function (msg)
+    ao.send({Target = Game, Action = "GetGameState"})
+    print('Start Moooooving!')
   end
 )
 
