@@ -4,6 +4,7 @@ Version = "0.2"
 -- Attack info
 LastPlayerAttacks = {}
 CurrentAttacks = 0
+TenSecondCheck = 0
 
 -- grid dimensions
 Width = 40
@@ -44,7 +45,10 @@ function onTick()
         LastTick = Now
     end
 
-    if TenSecondCheck == undefined then TenSecondCheck = Now end
+    if TenSecondCheck == 0 then 
+        TenSecondCheck = Now 
+    end
+
     local TenSecondElaspedCheck = Now - TenSecondCheck
     if TenSecondElaspedCheck >= 10000 then
         -- only keep the last 20
@@ -404,15 +408,13 @@ Handlers.add(
     "GetGameAttacksInfo",
     Handlers.utils.hasMatchingTag("Action", "GetGameAttacksInfo"),
     function (Msg)
-        local json = require("json")
-        local GameAttacksInfo = json.encode({
-            LastPlayerAttacks = LastPlayerAttacks,
+        local GameAttacksInfo = require("json").encode({
+            LastPlayerAttacks = Utils.values(LastPlayerAttacks)
         })
-        ao.send({
+        Send({
             Target = Msg.From,
             Action = "GameAttacksInfo",
             Data = GameAttacksInfo
         })
-        LastPlayerAttacks = {}
     end
 )
