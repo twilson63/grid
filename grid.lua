@@ -2,9 +2,9 @@ CRED = "Sa0iBLPNyJQrwpTTG-tWLQU-1QeUAJA73DdxGGiKoJc"
 Version = "0.2"
 
 -- Attack info
-LastPlayerAttacks = {}
-CurrentAttacks = 0
-TenSecondCheck = 0
+LastPlayerAttacks = LastPlayerAttacks or {}
+CurrentAttacks = CurrentAttacks or 0
+TenSecondCheck = TenSecondCheck or 0
 
 -- grid dimensions
 Width = 40
