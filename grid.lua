@@ -1,5 +1,5 @@
 CRED = "Sa0iBLPNyJQrwpTTG-tWLQU-1QeUAJA73DdxGGiKoJc"
-Version = "0.2"
+Version = "0.3"
 
 -- Attack info
 LastPlayerAttacks = LastPlayerAttacks or {}
