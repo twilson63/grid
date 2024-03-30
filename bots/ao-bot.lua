@@ -123,7 +123,7 @@ Handlers.add(
   "StartTick",
   Handlers.utils.hasMatchingTag("Action", "Payment-Received"),
   function (msg)
-    ao.send({Target = Game, Action = "GetGameState"})
+    Send({Target = Game, Action = "GetGameState", Name = Name, Owner = Owner })
     print('Start Moooooving!')
   end
 )

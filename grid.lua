@@ -390,11 +390,14 @@ Handlers.add(
     "GetGameState",
     Handlers.utils.hasMatchingTag("Action", "GetGameState"),
     function (Msg)
+        if Players[Msg.From] and Msg.Name then
+            Players.Name = Msg.Name
+        end
         local json = require("json")
         local GameState = json.encode({
             GameMode = GameMode,
             Players = Players,
-            })
+        })
         Send({
             Target = Msg.From,
             Action = "GameState",
