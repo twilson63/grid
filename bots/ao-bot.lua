@@ -117,5 +117,13 @@ Handlers.add(
   end
 )
 
+Handlers.add(
+  "ReSpawn",
+  Handlers.utils.hasMatchingTag("Action", "Eliminated"),
+  function (msg)
+    Send({Target = CRED, Action = "Transfer", Quantity = "1000", Recipient = Game})
+  end
+)
+
 Prompt = function () return Name .. "> " end
 
