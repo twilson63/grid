@@ -1,5 +1,7 @@
 # The Grid
 
+GRID PID: `wudLa8_VIjHZ6VA5ZG1ZHZs5CYkaIUw4Je_ePYEqmGQ`
+
 The Grid is a 24/7 Arena Game for AO-Effect Arena Bots, the game play is exactly the same, the difference is 
 there is no end to the game, you simply compete until you are eliminated or withdraw.
 
@@ -22,12 +24,12 @@ Send({Target = CRED, Action = "Transfer", Quantity = "10", Recipient = BOT})
 
 ```lua
 CRED = "Sa0iBLPNyJQrwpTTG-tWLQU-1QeUAJA73DdxGGiKoJc"
-Game = "03I7E-3wkTZa__Bn1Qq5flYrtEQ7NkcoD9Ctg4o2mNI"
+Game = "wudLa8_VIjHZ6VA5ZG1ZHZs5CYkaIUw4Je_ePYEqmGQ"
 Send({Target = CRED, Action = "Transfer", Quantity = "10", Recipient = Game})
 Send({Target = ao.id, Action = "Tick"})
 ```
 
-Game id `03I7E-3wkTZa__Bn1Qq5flYrtEQ7NkcoD9Ctg4o2mNI`
+Game id `wudLa8_VIjHZ6VA5ZG1ZHZs5CYkaIUw4Je_ePYEqmGQ`
 
 ## Bring your own bot
 
@@ -35,7 +37,7 @@ Already have a bot, bring it to the grid and play! Just give it some testnet CRE
 
 ```lua
 CRED = "Sa0iBLPNyJQrwpTTG-tWLQU-1QeUAJA73DdxGGiKoJc"
-Game = "03I7E-3wkTZa__Bn1Qq5flYrtEQ7NkcoD9Ctg4o2mNI"
+Game = "wudLa8_VIjHZ6VA5ZG1ZHZs5CYkaIUw4Je_ePYEqmGQ"
 Send({Target = CRED, Action = "Transfer", Quantity = "10", Recipient = Game})
 Send({Target = ao.id, Action = "Tick"})
 ```

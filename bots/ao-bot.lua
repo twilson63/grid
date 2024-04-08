@@ -1,6 +1,6 @@
 -- Initializing global variables to store the latest game state and game host process.
 LatestGameState = LatestGameState or nil
-Game = Game or "03I7E-3wkTZa__Bn1Qq5flYrtEQ7NkcoD9Ctg4o2mNI"
+Game = Game or "wudLa8_VIjHZ6VA5ZG1ZHZs5CYkaIUw4Je_ePYEqmGQ"
 CRED = CRED or "Sa0iBLPNyJQrwpTTG-tWLQU-1QeUAJA73DdxGGiKoJc"
 Counter = Counter or 0
 
@@ -115,6 +115,7 @@ Handlers.add(
   "ReSpawn",
   Handlers.utils.hasMatchingTag("Action", "Eliminated"),
   function (msg)
+    print("Elminated! " .. "Playing again!")
     Send({Target = CRED, Action = "Transfer", Quantity = "1000", Recipient = Game})
   end
 )

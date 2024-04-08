@@ -1,4 +1,4 @@
-Game = "hv9yqSIbVnoX7C2BoWvAI0y6_lVz5056QLff4thmngU"
+Game = "wudLa8_VIjHZ6VA5ZG1ZHZs5CYkaIUw4Je_ePYEqmGQ"
 
 Handlers.add("registered", Handlers.utils.hasMatchingTag("Action", "Registered"), function ()
   Send({Target = Game, Action = "Transfer", Recipient = Game, Quantity = "1"})
