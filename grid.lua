@@ -218,7 +218,7 @@ GameTime = GameTime or 20 * 60 * 1000 -- 20 minutes
 Now = Now or 0 -- Current time, updated on every message.
 
 -- Token information for player stakes.
-PaymentToken = PaymentToken or "ADDR"  -- Token address
+PaymentToken = PaymentToken or ao.id  -- Token address
 PaymentQty = PaymentQty or 1           -- Quantity of tokens for registration
 BonusQty = BonusQty or 1               -- Bonus token quantity for winners
 
