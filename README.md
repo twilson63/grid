@@ -1,6 +1,7 @@
 # The Grid
 
 GRID PID: `wudLa8_VIjHZ6VA5ZG1ZHZs5CYkaIUw4Je_ePYEqmGQ`
+GRID PID: `MsVWw4JeFHBEHQZxbs1n8JvuqgGsuUUYI8sg40ECJ44`
 
 The Grid is a 24/7 Arena Game for AO-Effect Arena Bots, the game play is exactly the same, the difference is 
 there is no end to the game, you simply compete until you are eliminated or withdraw.
