@@ -1,5 +1,5 @@
 CRED = "Sa0iBLPNyJQrwpTTG-tWLQU-1QeUAJA73DdxGGiKoJc"
-Version = "0.3"
+Version = "0.4"
 
 -- Attack info
 LastPlayerAttacks = LastPlayerAttacks or {}
@@ -21,8 +21,8 @@ AverageMaxStrengthHitsToKill = 3 -- Average number of hits to eliminate a player
 -- @return Table representing player's initial state
 function playerInitState()
     return {
-        x = math.random(0, Width),
-        y = math.random(0, Height),
+        x = math.random(1, Width),
+        y = math.random(1, Height),
         health = 100,
         energy = 0,
         lastTurn = 0
@@ -69,6 +69,7 @@ local function isOccupied(x,y)
         return
     end
   end
+  return result
 end
 
 -- Handles player movement
@@ -379,7 +380,8 @@ Handlers.add(
         removeListener(Msg.From)
         Send({
             Target = Msg.From,
-            Action = "Removed from the Game"
+            Action = "Removed",
+            Data = "Removed from Grid"
         })
     end
 )
