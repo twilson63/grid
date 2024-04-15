@@ -18,6 +18,12 @@ colors = {
   gray = "\27[90m"
 }
 
+-- Respawn - restart prize cycle
+function Respawn()
+  EliminatedCount = 0
+  Send({Target = ao.id, Action = "Eliminated"})
+end
+
 -- Checks if two points are within a given range.
 -- @param x1, y1: Coordinates of the first point.
 -- @param x2, y2: Coordinates of the second point.
