@@ -1,6 +1,7 @@
 CRED = "Sa0iBLPNyJQrwpTTG-tWLQU-1QeUAJA73DdxGGiKoJc"
-Version = "0.4"
+Version = "0.5"
 
+TURN_TIME = 250
 -- Attack info
 LastPlayerAttacks = LastPlayerAttacks or {}
 CurrentAttacks = CurrentAttacks or 0
@@ -85,8 +86,8 @@ function move(msg)
         DownRight = {x = 1, y = 1}, DownLeft = {x = -1, y = 1}
     }
 
-    -- only 1 turn per second
-    if msg.Timestamp <  Players[playerToMove].lastTurn + 1000 then
+    -- only 1 turn per 1/4 second
+    if msg.Timestamp <  Players[playerToMove].lastTurn + TURN_TIME then
         return
     end
     -- calculate and update new coordinates
@@ -123,8 +124,8 @@ function attack(msg)
     local x = Players[player].x
     local y = Players[player].y
 
-    -- only 1 turn per second
-    if msg.Timestamp <  Players[player].lastTurn + 1000 then
+    -- only 1/4 turn per second
+    if msg.Timestamp <  Players[player].lastTurn + TURN_TIME then
         return
     end
     
