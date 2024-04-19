@@ -1,6 +1,6 @@
 -- Initializing global variables to store the latest game state and game host process.
 LatestGameState = LatestGameState or nil
-Game = Game or "wudLa8_VIjHZ6VA5ZG1ZHZs5CYkaIUw4Je_ePYEqmGQ"
+Game = Game or "ltH8ToDf7hmFKc6NIefy5646NVFfBz8KHQqf-nkcD-s"
 CRED = CRED or "Sa0iBLPNyJQrwpTTG-tWLQU-1QeUAJA73DdxGGiKoJc"
 Counter = Counter or 0
 ONE_CRED = 1000
@@ -21,7 +21,7 @@ colors = {
 -- Respawn - restart prize cycle
 function Respawn()
   EliminatedCount = 0
-  Send({Target = ao.id, Action = "Eliminated"})
+  Send({Target = CRED, Action = "Transfer", Quantity = tostring(DailyPrize * ONE_CRED), Recipient = Game})
 end
 
 -- Checks if two points are within a given range.
@@ -82,22 +82,15 @@ Handlers.add(
 -- Handler to update the game state upon receiving game state information.
 Handlers.add(
   "UpdateGameState",
-  Handlers.utils.hasMatchingTag("Action", "GameState"),
+  function (msg) 
+    return msg.Action == "GameState" and msg.From == Game
+  end,
   function (msg)
     local json = require("json")
     LatestGameState = json.decode(msg.Data)
-    ao.send({Target = ao.id, Action = "UpdatedGameState"})
+    -- ao.send({Target = ao.id, Action = "UpdatedGameState"})
     --print("Game state updated. Print \'LatestGameState\' for detailed view.")
     print("Location: " .. "row: " .. LatestGameState.Players[ao.id].x .. ' col: ' .. LatestGameState.Players[ao.id].y)
-  end
-)
-
--- Handler to decide the next best action.
-Handlers.add(
-  "decideNextAction",
-  Handlers.utils.hasMatchingTag("Action", "UpdatedGameState"),
-  function ()
-    --print("Deciding next action...")
     decideNextAction()
     ao.send({Target = ao.id, Action = "Tick"})
   end
@@ -106,15 +99,17 @@ Handlers.add(
 -- Handler to automatically attack when hit by another player.
 Handlers.add(
   "ReturnAttack",
-  Handlers.utils.hasMatchingTag("Action", "Hit"),
+  function (msg) 
+    return msg.Action == "Hit" and msg.From == Game
+  end,
   function (msg)
     local playerEnergy = LatestGameState.Players[ao.id].energy
     if playerEnergy == undefined then
       print(colors.red .. "Unable to read energy." .. colors.reset)
-      ao.send({Target = Game, Action = "Attack-Failed", Reason = "Unable to read energy."})
+      decideNextAction()
     elseif playerEnergy > 10 then
       print(colors.red .. "Player has insufficient energy." .. colors.reset)
-      ao.send({Target = Game, Action = "Attack-Failed", Reason = "Player has no energy."})
+      decideNextAction()
     else
       print(colors.red .. "Returning attack..." .. colors.reset)
       ao.send({Target = Game, Action = "PlayerAttack", AttackEnergy = tostring(playerEnergy)})
@@ -125,7 +120,9 @@ Handlers.add(
 
 Handlers.add(
   "ReSpawn",
-  Handlers.utils.hasMatchingTag("Action", "Eliminated"),
+  function (msg) 
+    return msg.Action == "Eliminated" and msg.From == Game
+  end,
   function (msg)
     local quantity = DailyPrize 
     Now = msg.Timestamp
@@ -155,13 +152,14 @@ Handlers.add(
     end
     print("Elminated! " .. "Playing again! Prize: " .. tostring(math.floor(quantity)))
     Send({Target = CRED, Action = "Transfer", Quantity = tostring(math.floor(quantity)), Recipient = Game})
- 
   end
 )
 
 Handlers.add(
   "StartTick",
-  Handlers.utils.hasMatchingTag("Action", "Payment-Received"),
+  function (msg) 
+    return msg.Action == "Payment-Received" and msg.From == Game
+  end,
   function (msg)
     Send({Target = Game, Action = "GetGameState", Name = Name, Owner = Owner })
     print('Start Moooooving!')

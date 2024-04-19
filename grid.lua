@@ -1,5 +1,5 @@
 CRED = "Sa0iBLPNyJQrwpTTG-tWLQU-1QeUAJA73DdxGGiKoJc"
-Version = "0.5"
+Variant = "0.6"
 
 TURN_TIME = 250
 -- Attack info
@@ -38,7 +38,7 @@ function onTick()
     if LastTick == undefined then LastTick = Now end
 
     local Elapsed = Now - LastTick
-    if Elapsed >= 1000 then  -- Actions performed every second
+    if Elapsed >= TURN_TIME then  -- Actions performed every TURN
         for player, state in pairs(Players) do
             local newEnergy = math.floor(math.min(MaxEnergy, state.energy + (Elapsed * EnergyPerSec // 2000)))
             state.energy = newEnergy
@@ -110,6 +110,8 @@ function move(msg)
     else
         Send({Target = playerToMove, Action = "Move-Failed", Reason = "Invalid direction."})
     end
+    print("Moved...")
+    print(Players[playerToMove])
     Players[playerToMove].lastTurn = msg.Timestamp
     onTick()  -- Optional: Update energy each move
 end
@@ -160,6 +162,8 @@ function attack(msg)
             end
         end
     end
+    print("attacked...")
+    print(Players[player])
     Players[player].lastTurn = msg.Timestamp
 end
 
@@ -214,7 +218,7 @@ Handlers.add("PlayerAttack", Handlers.utils.hasMatchingTag("Action", "PlayerAtta
 GameMode = GameMode or "Playing"
 StateChangeTime = StateChangeTime or 0
 
--- State durations (in milliseconds)
+-- Betting State durations (in milliseconds)
 WaitTime = WaitTime or 2 * 60 * 1000 -- 2 minutes
 GameTime = GameTime or 20 * 60 * 1000 -- 20 minutes
 Now = Now or 0 -- Current time, updated on every message.
