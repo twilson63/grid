@@ -347,6 +347,11 @@ Handlers.add(
             tonumber(Msg.Quantity) >= PaymentQty and "continue"
     end,
     function(Msg)
+        if #Utils.keys(Players) == 35 then
+            Send({Target = CRED, Action = "Transfer", Quantity = Msg.Quantity, Recipient = Msg.Sender, ["X-Reason"] = "Game Maxed Out" })
+            return "ok"
+        end
+
         local q = tonumber(Msg.Quantity)
         
         if not Balances[Msg.Sender] then
