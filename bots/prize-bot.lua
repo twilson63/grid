@@ -92,7 +92,6 @@ Handlers.add(
     --print("Game state updated. Print \'LatestGameState\' for detailed view.")
     print("Location: " .. "row: " .. LatestGameState.Players[ao.id].x .. ' col: ' .. LatestGameState.Players[ao.id].y)
     decideNextAction()
-    ao.send({Target = ao.id, Action = "Tick"})
   end
 )
 
@@ -119,6 +118,40 @@ Handlers.add(
 )
 
 Handlers.add(
+  "Player-Moved",
+  function (msg)
+    return msg.Action == "Player-Moved" and msg.From == Game
+  end,
+  function (msg) 
+    decideNextAction()
+    Send({Target = ao.id, Action = "Tick"})
+  end
+)
+
+Handlers.add(
+  "Successful-Hit",
+  function (msg)
+    return msg.Action == "Successful-Hit" and msg.From == Game
+  end,
+  function (msg) 
+    print("HIT! Applied " .. msg.Damage .. " -> Keep Attacking")
+    Send({Target = Game, Action = "PlayerAttack", AttackEnergy = tostring(LatestGameState.Players[ao.id].energy)})
+    --Send({Target = ao.id, Action = "Tick"})
+  end
+)
+
+Handlers.add(
+  "Attack-Failed",
+  function (msg)
+    return msg.Action == "Attack-Failed" and msg.From == Game
+  end,
+  function (msg) 
+    decideNextAction()
+  end
+)
+
+
+Handlers.add(
   "ReSpawn",
   function (msg) 
     return msg.Action == "Eliminated" and msg.From == Game
@@ -139,17 +172,16 @@ Handlers.add(
     
     
     -- calculate prize amount
-    if EliminatedCount > 8 then 
-      quantity = 1 * ONE_CRED
-    elseif EliminatedCount >= 4 and EliminatedCount <= 8 then
-      quantity = 18 * ONE_CRED
-    else
-      -- half prize for each eliminated round
-      for i=1,EliminatedCount,1 do
-        quantity = quantity / 2
-      end
-      quantity = quantity * ONE_CRED
+    if EliminatedCount >= 4 then
+      EliminatedCount = 1
     end
+    
+    -- half prize for each eliminated round
+    for i=1,EliminatedCount,1 do
+      quantity = quantity / 2
+    end
+    quantity = quantity * ONE_CRED
+  
     print("Elminated! " .. "Playing again! Prize: " .. tostring(math.floor(quantity)))
     Send({Target = CRED, Action = "Transfer", Quantity = tostring(math.floor(quantity)), Recipient = Game})
   end
