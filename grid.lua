@@ -1,5 +1,6 @@
-CRED = "Sa0iBLPNyJQrwpTTG-tWLQU-1QeUAJA73DdxGGiKoJc"
-Variant = "0.6"
+local bint = require('.bint')(256)
+WAR = "xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10"
+Variant = "0.7"
 
 TURN_TIME = 250
 -- Attack info
@@ -97,7 +98,7 @@ function move(msg)
 
         -- Player cant move to cell already occupied.
         if isOccupied(newX, newY) then
-            Send({Target = playerToMove, Action = "Move-Failed", Reason = "Cell Occupied."})
+            msg.reply({Action = "Move-Failed", Reason = "Cell Occupied."})
             return 
         end
 
@@ -105,10 +106,10 @@ function move(msg)
         Players[playerToMove].x = (newX - 1) % Width + 1
         Players[playerToMove].y = (newY - 1) % Height + 1
 
-        Send({Target = playerToMove, Action="Player-Moved", Data = playerToMove .. " moved to " .. Players[playerToMove].x .. "," .. Players[playerToMove].y .. "."})
+        msg.reply({Action="Player-Moved", Data = playerToMove .. " moved to " .. Players[playerToMove].x .. "," .. Players[playerToMove].y .. "."})
         --announce("Player-Moved", playerToMove .. " moved to " .. Players[playerToMove].x .. "," .. Players[playerToMove].y .. ".")
     else
-        Send({Target = playerToMove, Action = "Move-Failed", Reason = "Invalid direction."})
+        msg.reply({Action = "Move-Failed", Reason = "Invalid direction."})
     end
     print("Moved...")
     print(Players[playerToMove])
@@ -133,7 +134,7 @@ function attack(msg)
     
     -- check if player has enough energy to attack
     if Players[player].energy < attackEnergy then
-        ao.send({Target = player, Action = "Attack-Failed", Reason = "Not enough energy."})
+        Send({Target = player, Action = "Attack-Failed", Reason = "Not enough energy."})
         return
     end
 
@@ -158,7 +159,7 @@ function attack(msg)
             else
                 Players[target].health = newHealth
                 Send({Target = target, Action = "Hit", Damage = tostring(damage), Health = tostring(newHealth)})
-                Send({Target = player, Action = "Successful-Hit", Recipient = target, Damage = tostring(damage), Health = tostring(newHealth)})
+                msg.reply({Action = "Successful-Hit", Recipient = target, Damage = tostring(damage), Health = tostring(newHealth)})
             end
         end
     end
@@ -179,10 +180,10 @@ end
 -- HANDLERS: Game state management for AO-Effect
 
 -- Handler for player movement
-Handlers.add("PlayerMove", Handlers.utils.hasMatchingTag("Action", "PlayerMove"), move)
+Handlers.add("PlayerMove", move)
 
 -- Handler for player attacks
-Handlers.add("PlayerAttack", Handlers.utils.hasMatchingTag("Action", "PlayerAttack"), attack)
+Handlers.add("PlayerAttack", attack)
 
 -- ARENA GAME BLUEPRINT.
 
@@ -248,7 +249,7 @@ PlayerInitState = PlayerInitState or {}
 -- @param description: Description of the event.
 function announce(event, description)
     for ix, address in pairs(Listeners) do
-        ao.send({
+        Send({
             Target = address,
             Action = "Announcement",
             Event = event,
@@ -262,7 +263,7 @@ end
 -- @param qty: The quantity of the reward.
 -- @param reason: The reason for the reward.
 function sendReward(recipient, qty, reason)
-    ao.send({
+    Send({
         Target = PaymentToken,
         Action = "Transfer",
         Quantity = tostring(qty),
@@ -305,10 +306,7 @@ function eliminatePlayer(eliminated, eliminator)
     removeListener(eliminated)
     -- announce("Player-Eliminated", eliminated .. " was eliminated by " .. eliminator .. "!")
     
-    local playerCount = 0
-    for player, _ in pairs(Players) do
-        playerCount = playerCount + 1
-    end
+    local playerCount = #Utils.keys(Players)
 end
 
 function scaleNumber(oldValue)
@@ -326,7 +324,7 @@ end
 -- HANDLERS: Game state management
 
 -- Handler for cron messages, manages game state transitions.
-Handlers.add(
+Handlers.prepend(
     "Game-State-Timers",
     function(Msg)
         return "continue"
@@ -343,12 +341,12 @@ Handlers.add(
     function(Msg)
         return
             Msg.Action == "Credit-Notice" and
-            Msg.From == CRED and
+            Msg.From == WAR and
             tonumber(Msg.Quantity) >= PaymentQty and "continue"
     end,
     function(Msg)
-        if #Utils.keys(Players) == 35 then
-            Send({Target = CRED, Action = "Transfer", Quantity = Msg.Quantity, Recipient = Msg.Sender, ["X-Reason"] = "Game Maxed Out" })
+        if #Utils.keys(Players) == 20 then
+            Send({Target = WAR, Action = "Transfer", Quantity = Msg.Quantity, Recipient = Msg.Sender, ["X-Reason"] = "Game Maxed Out" })
             return "ok"
         end
 
@@ -382,14 +380,13 @@ Handlers.add(
 -- Exits the game receives CRED
 Handlers.add(
     "Withdraw",
-    Handlers.utils.hasMatchingTag("Action", "Withdraw"),
     function(Msg)
         Players[Msg.From] = nil
-        Send({Target = CRED, Action = "Transfer", Quantity = Balances[Msg.From], Recipient = Msg.From })
+        local reward = bint(Balances[Msg.From]) * (bint(98) / bint(100))
+        Send({Target = WAR, Action = "Transfer", Quantity = tostring(reward), Recipient = Msg.From })
         Balances[Msg.From] = "0"
         removeListener(Msg.From)
-        Send({
-            Target = Msg.From,
+        Msg.reply({
             Action = "Removed",
             Data = "Removed from Grid"
         })
@@ -400,7 +397,6 @@ Handlers.add(
 -- Retrieves the current game state.
 Handlers.add(
     "GetGameState",
-    Handlers.utils.hasMatchingTag("Action", "GetGameState"),
     function (Msg)
         if Players[Msg.From] and Msg.Name then
             Players[Msg.From].name = Msg.Name
@@ -410,8 +406,7 @@ Handlers.add(
             GameMode = GameMode,
             Players = Players,
         })
-        Send({
-            Target = Msg.From,
+        Msg.reply({
             Action = "GameState",
             Data = GameState
         })
@@ -421,13 +416,11 @@ Handlers.add(
 -- Retrieves the current attacks that has been made in the game.
 Handlers.add(
     "GetGameAttacksInfo",
-    Handlers.utils.hasMatchingTag("Action", "GetGameAttacksInfo"),
     function (Msg)
         local GameAttacksInfo = require("json").encode({
             LastPlayerAttacks = Utils.values(LastPlayerAttacks)
         })
-        Send({
-            Target = Msg.From,
+        Msg.reply({
             Action = "GameAttacksInfo",
             Data = GameAttacksInfo
         })

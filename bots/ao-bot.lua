@@ -1,7 +1,7 @@
 -- Initializing global variables to store the latest game state and game host process.
 LatestGameState = LatestGameState or nil
-Game = Game or "wudLa8_VIjHZ6VA5ZG1ZHZs5CYkaIUw4Je_ePYEqmGQ"
-CRED = CRED or "Sa0iBLPNyJQrwpTTG-tWLQU-1QeUAJA73DdxGGiKoJc"
+Game = Game or "jrMIh1nE1txU3ThxJtu_ZkyaaNC1OLtb9oifzzNCRbA"
+WAR = WAR or "xU9zFkq3X2ZQ6olwNVvr1vUWIjc3kXTWr7xKQD6dh10"
 Counter = Counter or 0
 
 colors = {
@@ -36,21 +36,20 @@ function decideNextAction()
 
   if player.energy > 10 and targetInRange then
     print(colors.red .. "Player in range. Attacking..." .. colors.reset)
-    ao.send({Target = Game, Action = "PlayerAttack", AttackEnergy = tostring(player.energy)})
+    Send({Target = Game, Action = "PlayerAttack", AttackEnergy = tostring(player.energy)})
   else
     -- print(colors.red .. "No player in range or insufficient energy. Moving randomly." .. colors.reset)
     local directionMap = {"Up", "Down", "Left", "Right", "UpRight", "UpLeft", "DownRight", "DownLeft"}
     local randomIndex = math.random(#directionMap)
-    ao.send({Target = Game, Action = "PlayerMove", Direction = directionMap[randomIndex]})
+    Send({Target = Game, Action = "PlayerMove", Direction = directionMap[randomIndex]})
   end
 end
 
 -- Handler to print game announcements and trigger game state updates.
 Handlers.add(
-  "PrintAnnouncements",
-  Handlers.utils.hasMatchingTag("Action", "Announcement"),
+  "Announcement",
   function (msg)
-    ao.send({Target = Game, Action = "GetGameState"})
+    Send({Target = Game, Action = "GetGameState"})
     print(colors.green .. msg.Event .. ": " .. msg.Data .. colors.reset)
     print("Location: " .. "row: " .. LatestGameState.Players[ao.id].x .. ' col: ' .. LatestGameState.Players[ao.id].y)
 
@@ -63,7 +62,7 @@ Handlers.add(
   Handlers.utils.hasMatchingTag("Action", "Tick"),
   function ()
       -- print(colors.gray .. "Getting game state..." .. colors.reset)
-      ao.send({Target = Game, Action = "GetGameState"})
+      Send({Target = Game, Action = "GetGameState"})
   end
 )
 
@@ -74,7 +73,7 @@ Handlers.add(
   function (msg)
     local json = require("json")
     LatestGameState = json.decode(msg.Data)
-    ao.send({Target = ao.id, Action = "UpdatedGameState"})
+    Send({Target = ao.id, Action = "UpdatedGameState"})
     --print("Game state updated. Print \'LatestGameState\' for detailed view.")
     print("Location: " .. "row: " .. LatestGameState.Players[ao.id].x .. ' col: ' .. LatestGameState.Players[ao.id].y)
   end
@@ -87,7 +86,7 @@ Handlers.add(
   function ()
     --print("Deciding next action...")
     decideNextAction()
-    ao.send({Target = ao.id, Action = "Tick"})
+    Send({Target = ao.id, Action = "Tick"})
   end
 )
 
@@ -99,24 +98,24 @@ Handlers.add(
     local playerEnergy = LatestGameState.Players[ao.id].energy
     if playerEnergy == undefined then
       print(colors.red .. "Unable to read energy." .. colors.reset)
-      ao.send({Target = Game, Action = "Attack-Failed", Reason = "Unable to read energy."})
+      msg.reply({ Action = "Attack-Failed", Reason = "Unable to read energy."})
     elseif playerEnergy > 10 then
       print(colors.red .. "Player has insufficient energy." .. colors.reset)
-      ao.send({Target = Game, Action = "Attack-Failed", Reason = "Player has no energy."})
+      msg.reply({ Action = "Attack-Failed", Reason = "Player has no energy."})
     else
       print(colors.red .. "Returning attack..." .. colors.reset)
-      ao.send({Target = Game, Action = "PlayerAttack", AttackEnergy = tostring(playerEnergy)})
+      msg.reply({ Action = "PlayerAttack", AttackEnergy = tostring(playerEnergy)})
     end
-    ao.send({Target = ao.id, Action = "Tick"})
+    Send({Target = ao.id, Action = "Tick"})
   end
 )
 
 Handlers.add(
   "ReSpawn",
-  Handlers.utils.hasMatchingTag("Action", "Eliminated"),
+  "Eliminated",
   function (msg)
     print("Elminated! " .. "Playing again!")
-    Send({Target = CRED, Action = "Transfer", Quantity = "1000", Recipient = Game})
+    Send({Target = WAR, Action = "Transfer", Quantity = "1000", Recipient = Game})
   end
 )
 
@@ -130,4 +129,3 @@ Handlers.add(
 )
 
 Prompt = function () return Name .. "> " end
-
